@@ -137,6 +137,11 @@ saveAsCSV handle rows = do
   TIO.hPutStrLn handle $ T.intercalate ", " $ header rows
   TIO.hPutStr handle $ T.unlines $ map rowToCSV rows
 
+saveAsCSVToFile :: FilePath -> [Row] -> IO ()
+saveAsCSVToFile outfile rows = do
+  handle <- openFile outfile WriteMode
+  saveAsCSV handle rows
+
 -- | Testing 
 
 pipeline :: Lexicon -> [Document] -> [Row]
