@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings, NoMonomorphismRestriction #-}
 module NLP.MPQA where
 
+import Control.Applicative
 import Control.Lens
 import Data.Char
 import Data.Email
@@ -15,7 +16,7 @@ import Utils.Utils
 
 -- | Data structures to handle tokens
 
-data Token = Token {_word :: T.Text, _pos :: T.Text, _modifiers :: Row} deriving Show
+data Token = Token {_word :: T.Text, _pos :: T.Text, _modifiers :: [T.Text]} deriving Show
 --data Modifier = Negated | You | I deriving Show
 
 -- | Data structure to handle documents
@@ -23,7 +24,7 @@ data Document = Document {_identifier :: T.Text, _text :: T.Text} deriving Show
 
 -- | Data structures to handle Lexicon
 
-type Lexicon = Map.Map T.Text Row
+type Lexicon = Map.Map T.Text AnyField
 
 -- | Data structures to handle results
 
@@ -61,7 +62,7 @@ isNegation w = T.isSuffixOf "n't" w || elem w ["never","no","nothing","nowhere",
 tokenizeBy pred xs = prefix ++ suffix where
     (p, s) = break pred $ T.words xs
     prefix = map (\x -> makeToken x "" []) p -- make tuples with False for the words before the negation.
-    suffix = map (\x -> makeToken x "" [IntField {_name="negated.TRUE", _ivalue=1}]) s -- make tuples with True for negated words. 
+    suffix = map (\x -> makeToken x "" [".negated"]) s -- make tuples with True for negated words.
 
 normalize = T.toLower
 clauses = T.split (`elem` ".,:;!?")
@@ -75,8 +76,13 @@ applyLexicon :: Lexicon -> Document -> [Row]
 applyLexicon lex doc = map (map (setValue 1) . codeToken lex) $ negationTokenize doc
 setValue = set ivalue
 
-codeToken lex t = (_modifiers t) ++ Map.findWithDefault [] (_word t) lex
+codeToken lex t = case Map.lookup (_word t) lex of
+  Nothing -> []
+  Just x -> addModifiers (_modifiers t) [x]
 
+addModifiers [] field = field
+addModifiers ms field = (\x y -> modifyName (`T.append` x) y) <$> ms <*> field
+modifyName f = name `over` f
 
 summarizeLexicon :: Lexicon -> Document -> Row
 summarizeLexicon lex doc = docToField doc : fieldFreq ( concat $ applyLexicon lex doc)
@@ -100,9 +106,9 @@ makeLexicon = makeWordMap . map (extractFields . extractWords) where
     keepField = flip elem ["type","word1","priorpolarity"]
 
     makeWordMap = Map.fromList . map keyValuePair
-    keyValuePair xs = (snd $ head k, map tupleToFieldName v) where
-        k = filter (\x -> fst x == "word1") xs
-        v = xs \\ k -- the values are those elements of the list that is not the key.
+    keyValuePair xs = (snd $ head k, IntField {_name=v, _ivalue=0}) where
+      k = filter (\x -> fst x == "word1") xs
+      v = T.intercalate "." $ map (\(x,y) -> T.intercalate "." [x,y])  $ xs \\ k -- the values are those elements of the list that is not the key.
 
 readLexicon = fmap (makeLexicon . T.lines) . TIO.readFile 
 
