@@ -1,0 +1,10 @@
+
+* Introduction
+
+A module to sentiment-score texts using the [[http://mpqa.cs.pitt.edu/lexicons/subj_lexicon/MPQA][MPQA Subjectivity Lexicon]].
+
+* Tasks
+
+** TODO Token modifiers should be pasted to field names.
+
+** TODO integrate with Data.Email 
