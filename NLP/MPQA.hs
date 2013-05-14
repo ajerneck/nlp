@@ -72,7 +72,7 @@ makeToken t p ms = Token {_word = t, _pos = p, _modifiers = ms}
 -- | Functions to summarize lists of tokens into a Row.
 
 applyLexicon :: Lexicon -> Document -> [Row]
-applyLexicon lex doc = map (map (setValue 1)) $ map (codeToken lex) $ negationTokenize doc
+applyLexicon lex doc = map (map (setValue 1) . codeToken lex) $ negationTokenize doc
 setValue = set ivalue
 
 codeToken lex t = (_modifiers t) ++ Map.findWithDefault [] (_word t) lex
@@ -114,7 +114,7 @@ fillEmptyRows rs = map (fillEmptyFields (header rs)) rs
 -- | Fill a row missing Fields (from Header) with Fields with values of 0. Sort
 -- by name to ensure values line up with header in saveAsCSV.
 fillEmptyFields :: Header -> Row -> Row
-fillEmptyFields hs row = sortBy (comparing _name) $ unionBy sameName row $ map (\n -> IntField {_name=n, _ivalue=0}) $ hs
+fillEmptyFields hs row = sortBy (comparing _name) $ unionBy sameName row $ map (\n -> IntField {_name=n, _ivalue=0}) hs
 sameName a b = _name a == _name b
 
 header :: [Row] -> Header

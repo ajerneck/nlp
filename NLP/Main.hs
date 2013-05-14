@@ -20,15 +20,17 @@ import System.IO
 import Utils.Utils
 
 
+lexiconFile = "/home/alexander/data/nlp/lexicon/mpqa/subjclueslen1-HLTEMNLP05.tff"
+
 main :: IO ()
 main = do
-  lex <- readLexicon "/home/alexander/data/nlp/lexicon/mpqa/subjclueslen1-HLTEMNLP05.tff"
+  lex <- readLexicon lexiconFile
   let b = pipeline lex docs
   saveAsCSV stdout b
 
 mainDev :: IO [Row]
 mainDev = do
-  lex <- readLexicon "/home/alexander/data/nlp/lexicon/mpqa/subjclueslen1-HLTEMNLP05.tff"
+  lex <- readLexicon lexiconFile
   let b = pipeline lex docs
   return b
 
