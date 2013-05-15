@@ -10,3 +10,7 @@ A module to sentiment-score texts using the [[http://mpqa.cs.pitt.edu/lexicons/s
 
 ** DONE integrate with NLP.Email 
    - State "DONE"       from "TODO"       [2013-05-14 Tue 15:36]
+** DONE tokenize for object
+   - State "DONE"       from "TODO"       [2013-05-15 Wed 11:18]
+   - does the token come after a second person object?
+

@@ -51,29 +51,40 @@ tupleToFieldName (k,v) = IntField {_name = T.intercalate "." [k, v], _ivalue =0}
 
 -- | Functions for tokenizing texts.
 
-tokenize :: Document -> [Token]
-tokenize = map (\x -> makeToken x "" []). T.words . T.filter (not . isPunctuation) . normalize .  _text
-
-negationTokenize :: Document -> [Token]
-negationTokenize = concatMap (tokenizeBy isNegation) . clauses . normalize . _text
-
+-- | Tokenizer predicates
+isNegation :: T.Text -> Bool
 isNegation w = T.isSuffixOf "n't" w || elem w ["never","no","nothing","nowhere","noone","none","not","havent","hasnt","hadnt","cant","couldnt","shouldnt","wont","wouldnt","dont","doesnt","didnt","isnt","arent","aint"]
 
-tokenizeBy pred xs = prefix ++ suffix where
-    (p, s) = break pred $ T.words xs
-    prefix = map (\x -> makeToken x "" []) p -- make tuples with False for the words before the negation.
-    suffix = map (\x -> makeToken x "" [".negated"]) s -- make tuples with True for negated words.
+isYou :: T.Text -> Bool
+isYou w = w `elem` ["you","you're","you'r"]
+
+-- | List of tokenizers to apply
+tokenizers :: [(T.Text -> Bool,T.Text)]
+tokenizers = [(isNegation, ".negated"), (isYou,".you")]
+
+tokenize :: Document -> [Token]
+tokenize = map (makeToken "") .  Map.toList . Map.fromListWith (++) . concat . tokenizeByAll tokenizers . map T.words . makeClauses . normalize . _text where
+  makeToken pos (word, mods) = Token {_word=word, _pos=pos, _modifiers = nub mods}
+  -- use nub mods because there are many ".NOT" matches for each token.
+
+-- | Tokenize a list of clauses by applying a list of tokenizers.
+tokenizeByAll :: Applicative f => f (t -> Bool, T.Text) -> f [t] -> f [(t, [T.Text])]
+tokenizeByAll tokenizers clauses = tokenizeBy <$> tokenizers <*> clauses
+
+-- | Tokenize a clause using pred, adding modifier to all tokens after the predicate.
+tokenizeBy :: (t -> Bool, T.Text) -> [t] -> [(t, [T.Text])]
+tokenizeBy (pred, modifier) clause = prefix ++ suffix  where
+    (p, s) = break pred clause
+    prefix = map (\x -> (x, [".NOT" `T.append` modifier])) p -- mark non-matching tokens as well.
+    suffix = map (\x -> (x, [modifier])) s
 
 normalize = T.toLower
-clauses = T.split (`elem` ".,:;!?")
-
-
-makeToken t p ms = Token {_word = t, _pos = p, _modifiers = ms}
+makeClauses = T.split (`elem` ".,:;!?")
 
 -- | Functions to summarize lists of tokens into a Row.
 
 applyLexicon :: Lexicon -> Document -> [Row]
-applyLexicon lex doc = map (map (setValue 1) . codeToken lex) $ negationTokenize doc
+applyLexicon lex doc = map (map (setValue 1) . codeToken lex) $ tokenize doc
 setValue = set ivalue
 
 codeToken lex t = case Map.lookup (_word t) lex of
