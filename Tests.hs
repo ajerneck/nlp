@@ -11,10 +11,26 @@ isId x = _name x == "identifier"
 getId = filter isId 
 rmId = filter (not . isId)
 
-tests = test [ "testReadLexicon" ~: do lex <- readLexicon lexiconFile
-                                       assertEqual "for the number of words in lexicon," 6885 (length $ Map.keys lex)
-             , "testdocvalues" ~: do lex <- readLexicon lexiconFile
-                                     assertEqual "for the values of all docs," [[0,0,0,0,1,0,0,0,0],[1,0,0,0,1,0,0,0,0],[2,0,1,0,3,0,1,1,0],[0,2,0,1,0,3,1,0,1],[0,1,0,0,1,0,0,0,0]] (map (map _ivalue) $ map rmId $ pipeline lex docs)
+refDoc6 = [ TextField {_name = "identifier", _tvalue = "doc 6"}
+          , IntField {_name = "type.strongsubj.priorpolarity.negative.NOT.you", _ivalue = 1}
+          , IntField {_name = "type.strongsubj.priorpolarity.negative.negated", _ivalue = 1}
+          , IntField {_name = "type.weaksubj.priorpolarity.negative.NOT.negated", _ivalue = 1}
+          , IntField {_name = "type.weaksubj.priorpolarity.negative.NOT.you", _ivalue = 1}
+          , IntField {_name = "type.weaksubj.priorpolarity.negative.you", _ivalue = 1}
+          ]
+refDoc7 = [ TextField {_name = "identifier", _tvalue = "doc 7"}
+          , IntField {_name = "type.strongsubj.priorpolarity.negative.NOT.you", _ivalue = 1}
+          , IntField {_name = "type.strongsubj.priorpolarity.negative.negated", _ivalue = 1}
+          , IntField {_name = "type.weaksubj.priorpolarity.negative.NOT.negated", _ivalue = 1}
+          , IntField {_name = "type.weaksubj.priorpolarity.negative.NOT.you", _ivalue = 1}
+          , IntField {_name = "type.weaksubj.priorpolarity.positive.negated", _ivalue = 1}
+          , IntField {_name = "type.weaksubj.priorpolarity.positive.you", _ivalue = 1}
+          ]
+
+-- | Run tests.
+runTests = do
+  lex <- readLexicon lexiconFile
+  runTestTT $ test [ "testReadLexicon" ~: 6885  @=? (length $ Map.keys lex)
+             , "test doc 6" ~: refDoc6 @=? (summarizeLexicon lex (docs !! 5))
+             , "test doc 7" ~: refDoc7 @=? (summarizeLexicon lex (docs !! 6))
              ]
-        
-        
