@@ -21,21 +21,8 @@ import NLP.MPQA
 import System.IO
 import Utils.Utils
 
-
 lexiconFile = "/home/alexander/data/nlp/lexicon/mpqa/subjclueslen1-HLTEMNLP05.tff"
 emailDir = "/home/alexander/data/ma/emails/lists/gentoo.devel/"
-
-main :: IO ()
-main = do
-  lex <- readLexicon lexiconFile
-  let b = pipeline lex docs
-  saveAsCSV stdout b
-
-mainDev :: IO [Row]
-mainDev = do
-  lex <- readLexicon lexiconFile
-  let b = pipeline lex docs
-  return b
 
 mainEmails :: IO ()
 mainEmails = do

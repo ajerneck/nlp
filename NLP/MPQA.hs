@@ -32,7 +32,7 @@ type Row = [AnyField]
 
 data AnyField = IntField {_name :: T.Text, _ivalue :: Int}
               | TextField {_name :: T.Text, _tvalue :: T.Text}
-                deriving Show
+                deriving (Eq, Show)
 
 -- | Data structures to handle printing of Rows
 type Header = [T.Text]
@@ -153,19 +153,7 @@ saveAsCSVToFile outfile rows = do
   handle <- openFile outfile WriteMode
   saveAsCSV handle rows
 
--- | Testing 
+-- | Run the complete program
 
 pipeline :: Lexicon -> [Document] -> [Row]
 pipeline lex = fillEmptyRows . map (summarizeLexicon lex)
-
-docs :: [Document]
-docs = [ Document {_identifier = "doc 1", _text = "This is a test string, without negations in the first sentence. In the second there is a match for abandoned, a lexicon word"}
-       , Document {_identifier = "doc 2", _text = "abandoned abhor."}
-       , Document {_identifier = "doc 3", _text = "Doc 3 has many lexicon words such as truth false negative positive abandoned abjure abhor."}
-       , Document {_identifier = "doc 4", _text = "Doc 4 has many lexicon words such as don't truth false negative positive abandoned abjure abhor."}
-       , Document {_identifier = "doc 5", _text = "abandoned not abhor."}
-         
-       ]
-
-  
-  
