@@ -3,16 +3,12 @@ module NLP.MPQA where
 
 import Control.Applicative
 import Control.Lens
-import Data.Char
-import Data.Email
 import Data.List
-import Data.Maybe
 import qualified Data.Map as Map
 import Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Text.IO  as TIO
 import System.IO
-import Utils.Utils
 
 -- | Data structures to handle tokens
 
@@ -43,11 +39,8 @@ type Header = [T.Text]
 $(makeLenses ''AnyField)
 
 -- | Functions for operating on Fields
-
-tupleToTextField (k,v) = TextField {_name = k, _tvalue = v}
+tupleToIntField :: (T.Text, Int) -> AnyField
 tupleToIntField (k,v) = IntField {_name = k, _ivalue = v}
-
-tupleToFieldName (k,v) = IntField {_name = T.intercalate "." [k, v], _ivalue =0}
 
 -- | Functions for tokenizing texts.
 
@@ -59,11 +52,11 @@ isYou :: T.Text -> Bool
 isYou w = w `elem` ["you","you're","you'r"]
 
 -- | List of tokenizers to apply
-tokenizers :: [(T.Text -> Bool,T.Text)]
-tokenizers = [(isNegation, ".negated"), (isYou,".you")]
+allTokenizers :: [(T.Text -> Bool,T.Text)]
+allTokenizers = [(isNegation, ".negated"), (isYou,".you")]
 
 tokenize :: Document -> [Token]
-tokenize = map (makeToken "") .  Map.toList . Map.fromListWith (++) . concat . tokenizeByAll tokenizers . map T.words . makeClauses . normalize . _text where
+tokenize = map (makeToken "") .  Map.toList . Map.fromListWith (++) . concat . tokenizeByAll allTokenizers . map T.words . makeClauses . normalize . _text where
   makeToken pos (word, mods) = Token {_word=word, _pos=pos, _modifiers = nub mods}
   -- use nub mods because there are many ".NOT" matches for each token.
 
@@ -73,39 +66,44 @@ tokenizeByAll tokenizers clauses = tokenizeBy <$> tokenizers <*> clauses
 
 -- | Tokenize a clause using pred, adding modifier to all tokens after the predicate.
 tokenizeBy :: (t -> Bool, T.Text) -> [t] -> [(t, [T.Text])]
-tokenizeBy (pred, modifier) clause = prefix ++ suffix  where
-    (p, s) = break pred clause
+tokenizeBy (tokenizer, modifier) clause = prefix ++ suffix  where
+    (p, s) = break tokenizer clause
     prefix = map (\x -> (x, [".NOT" `T.append` modifier])) p -- mark non-matching tokens as well.
     suffix = map (\x -> (x, [modifier])) s
 
+normalize :: T.Text -> T.Text
 normalize = T.toLower
+
+makeClauses :: T.Text -> [T.Text]
 makeClauses = T.split (`elem` ".,:;!?")
 
 -- | Functions to summarize lists of tokens into a Row.
 
 applyLexicon :: Lexicon -> Document -> [Row]
-applyLexicon lex doc = map (map (setValue 1) . codeToken lex) $ tokenize doc
+applyLexicon lexicon doc = map (map (setValue 1) . codeToken lexicon) $ tokenize doc
+
+setValue :: Int -> AnyField -> AnyField
 setValue = set ivalue
 
-codeToken lex t = case Map.lookup (_word t) lex of
+codeToken :: Lexicon -> Token -> [AnyField]
+codeToken lexicon t = case Map.lookup (_word t) lexicon of
   Nothing -> []
   Just x -> addModifiers (_modifiers t) [x]
 
+addModifiers :: [T.Text] -> [AnyField] -> [AnyField]
 addModifiers [] field = field
 addModifiers ms field = (\x y -> modifyName (`T.append` x) y) <$> ms <*> field
+
+modifyName :: (T.Text -> T.Text) -> AnyField -> AnyField
 modifyName f = name `over` f
 
 summarizeLexicon :: Lexicon -> Document -> Row
-summarizeLexicon lex doc = docToField doc : fieldFreq ( concat $ applyLexicon lex doc)
+summarizeLexicon lexicon doc = docToField doc : fieldFreq ( concat $ applyLexicon lexicon doc)
 
+docToField :: Document -> AnyField
 docToField doc = TextField {_name="identifier", _tvalue = _identifier doc}
 
-summarizeWordCount = wordCount . map _word
-
-wordCount xs = IntField {_name = "wordcount", _ivalue = length xs}
-
-freq xs = Map.toList $ Map.fromListWith (+) [(c, 1) | c <- xs]
-
+fieldFreq :: [AnyField] -> [AnyField]
 fieldFreq xs = map tupleToIntField $ Map.toList $ Map.fromListWith (+) [(n, v) | (IntField n v) <- xs]
 
 -- | Functions to handle lexicon
@@ -113,7 +111,7 @@ fieldFreq xs = map tupleToIntField $ Map.toList $ Map.fromListWith (+) [(n, v) |
 makeLexicon :: [T.Text] -> Lexicon
 makeLexicon = makeWordMap . map (extractFields . extractWords) where
     extractWords = map (T.split (=='=')) . T.words
-    extractFields = foldr (\a@(n:v:[]) acc -> if keepField n then (n,v):acc else acc) []
+    extractFields = foldr (\(n:v:[]) acc -> if keepField n then (n,v):acc else acc) []
     keepField = flip elem ["type","word1","priorpolarity"]
 
     makeWordMap = Map.fromList . map keyValuePair
@@ -121,6 +119,7 @@ makeLexicon = makeWordMap . map (extractFields . extractWords) where
       k = filter (\x -> fst x == "word1") xs
       v = T.intercalate "." $ map (\(x,y) -> T.intercalate "." [x,y])  $ xs \\ k -- the values are those elements of the list that is not the key.
 
+readLexicon :: FilePath -> IO Lexicon
 readLexicon = fmap (makeLexicon . T.lines) . TIO.readFile 
 
 -- Functions to print out a Row in csv format.
@@ -131,8 +130,8 @@ fillEmptyRows rs = map (fillEmptyFields (header rs)) rs
 -- | Fill a row missing Fields (from Header) with Fields with values of 0. Sort
 -- by name to ensure values line up with header in saveAsCSV.
 fillEmptyFields :: Header -> Row -> Row
-fillEmptyFields hs row = sortBy (comparing _name) $ unionBy sameName row $ map (\n -> IntField {_name=n, _ivalue=0}) hs
-sameName a b = _name a == _name b
+fillEmptyFields hs row = sortBy (comparing _name) $ unionBy sameName row $ map (\n -> IntField {_name=n, _ivalue=0}) hs where
+  sameName a b = _name a == _name b
 
 header :: [Row] -> Header
 header =  sort . nub . concatMap (map (view name))
@@ -140,8 +139,9 @@ header =  sort . nub . concatMap (map (view name))
 rowToCSV :: Row -> T.Text
 rowToCSV = T.intercalate ", " . map getValueAsText
 
-getValueAsText (TextField n v) = v
-getValueAsText (IntField n v) = T.pack $ show v
+getValueAsText :: AnyField -> T.Text
+getValueAsText (TextField _ v) = v
+getValueAsText (IntField _ v) = T.pack $ show v
 
 saveAsCSV :: Handle -> [Row] -> IO ()
 saveAsCSV handle rows = do
@@ -149,11 +149,11 @@ saveAsCSV handle rows = do
   TIO.hPutStr handle $ T.unlines $ map rowToCSV rows
 
 saveAsCSVToFile :: FilePath -> [Row] -> IO ()
-saveAsCSVToFile outfile rows = do
-  handle <- openFile outfile WriteMode
+saveAsCSVToFile filename rows = do
+  handle <- openFile filename WriteMode
   saveAsCSV handle rows
 
 -- | Run the complete program
 
 pipeline :: Lexicon -> [Document] -> [Row]
-pipeline lex = fillEmptyRows . map (summarizeLexicon lex)
+pipeline lexicon = fillEmptyRows . map (summarizeLexicon lexicon)

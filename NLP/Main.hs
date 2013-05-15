@@ -18,19 +18,20 @@ import Data.MBox
 import Data.List
 import NLP.Email
 import NLP.MPQA
-import System.IO
 import Utils.Utils
 
+lexiconFile :: FilePath
 lexiconFile = "/home/alexander/data/nlp/lexicon/mpqa/subjclueslen1-HLTEMNLP05.tff"
+emailDir :: FilePath
 emailDir = "/home/alexander/data/ma/emails/lists/gentoo.devel/"
 
 mainEmails :: IO ()
 mainEmails = do
-  lex <- readLexicon lexiconFile
+  lexicon <- readLexicon lexiconFile
   -- convert an email to a document, only keeping the original text (discarding quoted text)
-  let messageToDoc m@(Message f h b) = Document {_identifier=getHeader isID m, _text=original b}
+  let messageToDoc m@(Message _ _ b) = Document {_identifier=getHeader isID m, _text=original b}
   let config =  Config { info = "Sentiment-scoring using MPQA "
-                       , processingFunc = (pipeline lex) . map  messageToDoc
+                       , processingFunc = (pipeline lexicon) . map  messageToDoc
                        , saveFunc = saveAsCSVToFile
                        , outfile = "-mpqa-out.dat"
                        }
