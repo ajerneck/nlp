@@ -50,8 +50,8 @@ main = do
   let b = pipeline lex docs
   saveAsCSV stdout b
 
-mainDev :: IO [Row]
+--mainDev :: IO [(Document, Row)]
 mainDev = do
   lex <- readLexicon lexiconFile
-  let b = pipeline lex docs
+  let b = pipelineKeepText lex docs
   return b

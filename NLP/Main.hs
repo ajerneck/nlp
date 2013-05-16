@@ -25,11 +25,14 @@ lexiconFile = "/home/alexander/data/nlp/lexicon/mpqa/subjclueslen1-HLTEMNLP05.tf
 emailDir :: FilePath
 emailDir = "/home/alexander/data/ma/emails/lists/gentoo.devel/"
 
+messageToDoc :: Message -> Document
+messageToDoc m@(Message _ _ b) = Document {_identifier=getHeader isID m, _text=original b}
+
 mainEmails :: IO ()
 mainEmails = do
   lexicon <- readLexicon lexiconFile
   -- convert an email to a document, only keeping the original text (discarding quoted text)
-  let messageToDoc m@(Message _ _ b) = Document {_identifier=getHeader isID m, _text=original b}
+--  let messageToDoc m@(Message _ _ b) = Document {_identifier=getHeader isID m, _text=original b}
   let config =  Config { info = "Sentiment-scoring using MPQA "
                        , processingFunc = (pipeline lexicon) . map  messageToDoc
                        , saveFunc = saveAsCSVToFile
@@ -38,3 +41,10 @@ mainEmails = do
   let allFiles = getAllFiles emailDir (isSuffixOf "40001")
   -- run processAndSave in the reader monad transformer so it gets access to config.
   allFiles >>= mapM_ (\x -> runReaderT (processAndSave x) config)
+
+mainEmailsDev :: FilePath -> IO [Row]
+mainEmailsDev infile = do
+  lexicon <- readLexicon lexiconFile
+  docs <- runWithText parseMBox infile
+  let results = (pipelineKeepText lexicon) $ map messageToDoc $ docs
+  return results    
