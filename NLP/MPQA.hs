@@ -10,32 +10,26 @@ import qualified Data.Text as T
 import qualified Data.Text.IO  as TIO
 import System.IO
 
--- | Data structures to handle tokens
-
+-- | Data structure to handle tokens
 data Token = Token {_word :: T.Text, _pos :: T.Text, _modifiers :: [T.Text]} deriving Show
---data Modifier = Negated | You | I deriving Show
 
 -- | Data structure to handle documents
 data Document = Document {_identifier :: T.Text, _text :: T.Text} deriving Show
 
--- | Data structures to handle Lexicon
-
+-- | Data structure to handle Lexicon
 type Lexicon = Map.Map T.Text AnyField
 
 -- | Data structures to handle results
-
 type Row = [AnyField]
 
 data AnyField = IntField {_name :: T.Text, _ivalue :: Int}
               | TextField {_name :: T.Text, _tvalue :: T.Text}
                 deriving (Eq, Show)
 
--- | Data structures to handle printing of Rows
+-- | Data structure to handle printing of Rows
 type Header = [T.Text]
 
--- -- | Template haskell to make lenses
--- $(makeLenses ''Token)
--- $(makeLenses ''Document)
+-- | Template haskell to make lenses
 $(makeLenses ''AnyField)
 
 -- | Functions for operating on Fields
@@ -188,4 +182,3 @@ getIntValueByName n = head . map _ivalue . filter (\f -> getName f == n)
 
 getName :: AnyField -> T.Text
 getName = view name
-
