@@ -157,3 +157,35 @@ saveAsCSVToFile filename rows = do
 
 pipeline :: Lexicon -> [Document] -> [Row]
 pipeline lexicon = fillEmptyRows . map (summarizeLexicon lexicon)
+
+-- | Run pipeline, adding document text as a field.
+pipelineKeepText :: Lexicon -> [Document] -> [Row]
+pipelineKeepText lexicon docs = zipWith (:) (map documentTextToField docs) $ pipeline lexicon docs
+
+-- | Make a field out of the document text.
+documentTextToField :: Document -> AnyField
+documentTextToField (Document i t)= TextField {_name = "text", _tvalue=t}
+
+-- | Functions to display rows matching certain criteria.
+
+report :: [Row] -> [[T.Text]]
+report = map (map _tvalue . filter (\x -> _name x == "text")) . take 3 . reverse . sortedByIntValue  "type.strongsubj.priorpolarity.negative.you"
+
+reportIDs :: T.Text -> [Row] -> [[T.Text]]
+reportIDs n = map (map _tvalue . filter (\x -> _name x == "identifier")) . take 3 . reverse . sortedByIntValue n
+
+minBy :: T.Text -> [Row] -> Row
+minBy n = head . sortedByIntValue n
+
+maxBy :: T.Text -> [Row] -> Row
+maxBy n = last . sortedByIntValue n
+
+sortedByIntValue :: T.Text -> [Row] -> [Row]
+sortedByIntValue n = sortBy $ comparing (getIntValueByName n) 
+
+getIntValueByName :: T.Text -> Row -> Int
+getIntValueByName n = head . map _ivalue . filter (\f -> getName f == n)
+
+getName :: AnyField -> T.Text
+getName = view name
+

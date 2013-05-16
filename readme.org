@@ -14,7 +14,8 @@ A module to sentiment-score texts using the [[http://mpqa.cs.pitt.edu/lexicons/s
    - State "DONE"       from "TODO"       [2013-05-15 Wed 11:18]
    - does the token come after a second person object?
 
-** TODO functions to display sample of messages
+** DONE functions to display sample of messages
+   - State "DONE"       from "TODO"       [2013-05-16 Thu 11:56]
    - random sample.
    - distribution of variables
    - max of specified variables.
