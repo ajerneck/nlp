@@ -20,6 +20,29 @@ A module to sentiment-score texts using the [[http://mpqa.cs.pitt.edu/lexicons/s
    - distribution of variables
    - max of specified variables.
 
+** DONE pos tagging
+   :LOGBOOK:
+   - State "DONE"       from "TODO"       [2013-05-23 Thu 11:35]
+   :END:
+   - use
+     [[http://nlpwp.org/book/chap-tagging.xhtml#sec-tagging-frequency]]
+
+** TODO decide on order of tokenize and tokenize' in mpqa
+   - tokenize messes up the original order, because it concatenates a
+     bunch of tokenizers. at the same time, the pos tagging needs the
+     original sequence of tokens because it uses that context. So,
+     pos tagging should come before what I know call tokenize (the
+     tokenize function), which is actually "apply modifiers" or
+     something like that. so the order should be: 
+     - 0) split into words
+	   (ie, what actually is tokenize, keeping punctuation, )
+     - 1) pos tag
+     - 2) apply modifiers
+     - 3) match against lexicon 
+
+** TODO measuring deliberation
+   - start here: http://citeseerx.ist.psu.edu/showciting;jsessionid=8BB474BDB90C9E9F3DBD8D1060565A91?cid=11533353
+   - also: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.182.2569
 ** TODO [#B] parametrize the modify assignment in tokenizeBy
     - now it always assigns the modifier to tokens after the
       predicate, but this could be a function; that would allow

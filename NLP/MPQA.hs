@@ -11,7 +11,7 @@ import qualified Data.Text.IO  as TIO
 import System.IO
 
 -- | Data structure to handle tokens
-data Token = Token {_word :: T.Text, _pos :: T.Text, _modifiers :: [T.Text]} deriving Show
+data Token = Token {_word :: T.Text, _pos :: Maybe T.Text, _modifiers :: [T.Text]} deriving Show
 
 -- | Data structure to handle documents
 data Document = Document {_identifier :: T.Text, _text :: T.Text} deriving Show
@@ -49,11 +49,15 @@ isYou w = w `elem` ["you","you're","you'r"]
 allTokenizers :: [(T.Text -> Bool,T.Text)]
 allTokenizers = [(isNegation, ".negated"), (isYou,".you")]
 
+
+tokenize' :: Document -> [Token]
+tokenize' = map (\w -> Token w Nothing []) . concatMap T.words . makeClauses . normalize . _text
+
 tokenize :: Document -> [Token]
-tokenize = map (makeToken "") .  Map.toList . Map.fromListWith (++) . concat . tokenizeByAll allTokenizers . map T.words . makeClauses . normalize . _text where
+tokenize = map (makeToken Nothing) .  Map.toList . Map.fromListWith (++) . concat . tokenizeByAll allTokenizers . map T.words . makeClauses . normalize . _text where
   makeToken pos (word, mods) = Token {_word=word, _pos=pos, _modifiers = nub mods}
   -- use nub mods because there are many ".NOT" matches for each token.
-
+  
 -- | Tokenize a list of clauses by applying a list of tokenizers.
 tokenizeByAll :: Applicative f => f (t -> Bool, T.Text) -> f [t] -> f [(t, [T.Text])]
 tokenizeByAll tokenizers clauses = tokenizeBy <$> tokenizers <*> clauses
