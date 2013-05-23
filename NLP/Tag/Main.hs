@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 --------------------------------------------------------------------------
 {- |
 Script      :  NLP.Tag.Main
@@ -13,8 +14,8 @@ Script to learn Brill tagger rules.
 
 module Main where
 
-import NLP.Tag
-
+import NLP.Tag.Frequency
+import NLP.Tag.Brill
 
 main = do
   c <- readBrown brownTrainFile
