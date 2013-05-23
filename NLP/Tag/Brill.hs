@@ -143,7 +143,7 @@ ruleApplication (SurroundTagRule (Replacement old new) prev next) z = do
   (_, proposed) <- Zip.safeCursor z
   (_, nextProposed) <- rightCursor z
   (_, prevProposed) <- leftCursor z
-  if proposed == old && prevProposed == next && nextProposed == next then Just new else Nothing
+  if proposed == old && prevProposed == prev && nextProposed == next then Just new else Nothing
 
 
 
