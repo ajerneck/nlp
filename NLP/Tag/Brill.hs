@@ -17,18 +17,14 @@ here: http://nlpwp.org/book/chap-tagging.xhtml .
 
 module NLP.Tag.Brill where
         
-import Control.Monad
+
 import Data.List
 import qualified Data.List.Zipper as Zip
 import qualified Data.Map as Map
 import Data.Maybe
-import qualified Data.Set as Set
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
 
 import NLP.MPQA
 import NLP.Tag.Frequency
-import Utils.Utils
 
 import Debug.Trace
 
@@ -114,7 +110,7 @@ selectRule ((rule,_):xs) z = selectRule_ xs z (rule, scoreRule rule z)
 
 selectRule_ :: [(TransformationRule, Int)] -> Zip.Zipper (Tag, Tag) -> (TransformationRule, Int) -> (TransformationRule, Int)
 selectRule_ [] _ best = best
-selectRule_ ((rule, correct):xs) z best@(bestRule, bestScore) 
+selectRule_ ((rule, correct):xs) z best@(_, bestScore) 
   | bestScore >= correct = best
   | bestScore >= score = selectRule_ xs z best
   | otherwise = selectRule_ xs z (rule, score)
@@ -178,17 +174,17 @@ ruleApplicationWrapper r z = case (trace $ "ruleApplicationWrapper: "  ++ show r
 -- | Apply a rule to the focused element of a zipper.
 ruleApplicationToToken :: TransformationRule -> Zip.Zipper Token -> Maybe Token
 ruleApplicationToToken (NextTagRule (Replacement old new) next) z = do  
-  pt@(Token w proposed ms) <- Zip.safeCursor z 
-  nt@(Token _ nextProposed _) <- rightCursor z
+  (Token w proposed ms) <- Zip.safeCursor z 
+  (Token _ nextProposed _) <- rightCursor z
   if (trace $ "nexttagrule " ++ show proposed ++ show old ) chkOneMaybe proposed old && chkOneMaybe nextProposed next then Just (Token w (Just new) ms) else Nothing
 ruleApplicationToToken (PrevTagRule (Replacement old new) prev) z = do  
-  pt@(Token w proposed ms) <- Zip.safeCursor z 
-  nt@(Token _ prevProposed _) <- leftCursor z
+  (Token w proposed ms) <- Zip.safeCursor z 
+  (Token _ prevProposed _) <- leftCursor z
   if chkOneMaybe proposed old && chkOneMaybe prevProposed prev then Just (Token w (Just new) ms) else Nothing
 ruleApplicationToToken (SurroundTagRule (Replacement old new) prev next) z = do  
-  pt@(Token w proposed ms) <- Zip.safeCursor z 
-  nt@(Token _ nextProposed _) <- rightCursor z
-  nt@(Token _ prevProposed _) <- leftCursor z
+  (Token w proposed ms) <- Zip.safeCursor z 
+  (Token _ nextProposed _) <- rightCursor z
+  (Token _ prevProposed _) <- leftCursor z
   if chkOneMaybe proposed old && chkOneMaybe nextProposed next && chkOneMaybe prevProposed prev then Just (Token w (Just new) ms) else Nothing
 
 chkOneMaybe :: (Eq a, Show a) => Maybe a -> a -> Bool

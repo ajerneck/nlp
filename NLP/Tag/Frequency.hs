@@ -17,17 +17,12 @@ here: http://nlpwp.org/book/chap-tagging.xhtml .
 
 module NLP.Tag.Frequency where
         
-import Control.Monad
 import Data.List
-import qualified Data.List.Zipper as Zip
 import qualified Data.Map as Map
-import Data.Maybe
-import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
 import NLP.MPQA
-import Utils.Utils
 
 
 type Tkn = T.Text
@@ -36,19 +31,24 @@ type Tag = T.Text
 data TrainingInstance = TrainingInstance Tkn Tag deriving Show
   
 --TODO: these should be read from a config file.
+brownTrainFile :: FilePath
 brownTrainFile = "/home/alexander/data/nlp/corpora/nlpwp-data/brown-pos-train.txt"
+brownTestFile :: FilePath
 brownTestFile = "/home/alexander/data/nlp/corpora/nlpwp-data/brown-pos-test.txt"
 
 rsplit :: T.Text -> T.Text -> (T.Text, T.Text)
 rsplit sep s = (T.init tkn,tag) where
   (tkn,tag) = T.breakOnEnd sep s
 
+toTrainingInstance :: T.Text -> TrainingInstance
 toTrainingInstance s = TrainingInstance tkn tag where
   (tkn, tag) = rsplit "/" s
 
+tagToToken :: Tag -> Token
 tagToToken s = Token tkn (Just tag) [] where
   (tkn, tag) = rsplit "/" s
 
+tokenTagFreqs :: [TrainingInstance] -> Map.Map Tkn (Map.Map Tag Int)
 tokenTagFreqs = foldl' countWord Map.empty where
   countWord m  (TrainingInstance token tag)= Map.insertWith (countTag tag) token (Map.singleton tag 1) m
   countTag tag _ = Map.insertWith (+) tag 1
@@ -76,6 +76,7 @@ evalTagger tagFun = foldl' eval (0,0,0) where
                       (n+1, c, u)
         Nothing -> (n+1, c, u+1)
 
+baseLineTagger :: Tag -> a -> Maybe Tag
 baseLineTagger tag _ = Just tag
 
 -- | Tag using a supplied tagger, backing off to a default supplied tag if it does not find a match.
@@ -85,19 +86,18 @@ backoffTagger f bt t = let pick = f t in
     Just tag -> Just tag
     Nothing -> Just bt
 
-
 applyTagger :: (Tkn -> Maybe Tag) -> [Token] -> [Token]
-applyTagger tagger = map (applyTagger_ tagger) where
-  applyTagger_ tagger (Token w p ms) = Token {_word = w, _pos = tagger w, _modifiers = ms}
+applyTagger tagFun = map (applyTagger_ tagFun) where
+  applyTagger_ tagFun (Token w _ ms) = Token {_word = w, _pos = tagFun w, _modifiers = ms}
   
-
 -- Main functions
 
+readBrown :: FilePath -> IO [TrainingInstance]
 readBrown infile = do
   c <- TIO.readFile infile
   return $ map toTrainingInstance $ T.words c
 
-
+trainTagger :: FilePath -> IO (Tkn -> Maybe Tag)
 trainTagger trainFile = do  
   train <- readBrown trainFile
   let model = trainFreqTagger train

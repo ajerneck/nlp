@@ -11,7 +11,6 @@ import NLP.Tag.Frequency
 
 import System.IO
 import Test.HUnit
-import qualified Data.List.Zipper as Zip
 
 -- | Test and reference data for MPQA
 docs :: [Document]
